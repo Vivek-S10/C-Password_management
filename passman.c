@@ -1,0 +1,326 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_USERNAME_LENGTH 20
+#define MAX_PASSWORD_LENGTH 20
+#define MAX_WEBSITE_LENGTH 50
+#define MAX_PASSWORD_GEN_LENGTH 17
+
+unsigned int hashWord(const char* word) {
+    unsigned int hash = 0;
+
+    // Simple hash function to calculate a unique hash value for the word
+    for (size_t i = 0; i < strlen(word); i++) {
+        hash = hash * 31 + word[i];
+    }
+    return hash;
+}
+
+void generatepassword_gen(const char* word, char* password_gen) {
+    unsigned int hash = hashWord(word);
+
+    // Seed the random number generator with the hash value
+    srand(hash);
+
+    // Generate a random password_gen by replacing characters in the word
+    for (size_t i = 0; i < MAX_PASSWORD_GEN_LENGTH - 1; i++) {
+        password_gen[i] = rand() % 94 + 33;  // ASCII range: 33-126
+    }
+
+    // Null-terminate the password_gen string
+    password_gen[MAX_PASSWORD_GEN_LENGTH - 1] = '\0';
+}
+
+
+typedef struct {
+    char username[MAX_USERNAME_LENGTH];
+    char password[MAX_PASSWORD_LENGTH];
+    char website[MAX_WEBSITE_LENGTH];
+} User;
+
+void storeCredentials(User* user, const char* website, const char* username, const char* password) {
+    strncpy(user->website, website, MAX_WEBSITE_LENGTH - 1);
+    strncpy(user->username, username, MAX_USERNAME_LENGTH - 1);
+    strncpy(user->password, password, MAX_PASSWORD_LENGTH - 1);
+    user->website[MAX_WEBSITE_LENGTH - 1] = '\0';
+    user->username[MAX_USERNAME_LENGTH - 1] = '\0';
+    user->password[MAX_PASSWORD_LENGTH - 1] = '\0';
+}
+
+void saveUserToFile(const User* user) {
+    FILE* file = fopen("users.txt", "a");
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return;
+    }
+
+    fprintf(file, "%s,%s,%s\n", user->website, user->username, user->password);
+    fclose(file);
+}
+
+int isUsernameTaken(const char* username) {
+    FILE* file = fopen("users.txt", "r");
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return 0;
+    }
+
+    char line[100];
+    while (fgets(line, sizeof(line), file) != NULL) {
+        char storedUsername[MAX_USERNAME_LENGTH];
+        sscanf(line, ",%[^,]", storedUsername);
+
+        if (strcmp(storedUsername, username) == 0) {
+            fclose(file);
+            return 1;  // Username already taken
+        }
+    }
+
+    fclose(file);
+    return 0;  // Username available
+}
+
+
+
+void registerUser() {
+    char username[MAX_USERNAME_LENGTH];
+    char password[MAX_PASSWORD_LENGTH];
+
+    printf("Enter a username: ");
+    scanf("%s", username);
+
+    // Check if username is already taken
+    if (isUsernameTaken(username)) {
+        printf("\nUsername already taken. Please choose a different username.\n");
+        return;
+    }
+
+    printf("Enter a password: ");
+    scanf("%s", password);
+
+    // Create a new user object
+    User newUser;
+    storeCredentials(&newUser, "", username, password);
+    saveUserToFile(&newUser);
+
+    printf("Registration successful. You can now log in with your username and password.\n");
+}
+
+int authenticateUser(const char* username, const char* password) {
+    FILE* file = fopen("users.txt", "r");
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return 0;
+    }
+
+    char line[100];
+    while (fgets(line, sizeof(line), file) != NULL) {
+        char storedUsername[MAX_USERNAME_LENGTH];
+        char storedPassword[MAX_PASSWORD_LENGTH];
+        sscanf(line, ",%[^,],%s", storedUsername, storedPassword);
+
+        if (strcmp(storedUsername, username) == 0 && strcmp(storedPassword, password) == 0) {
+            fclose(file);
+            return 1;  // Authentication successful
+        }
+    }
+
+    fclose(file);
+    return 0;  // Authentication failed
+}
+
+ 
+/*void addCredential(const char* username) {          //not working
+    char website[MAX_WEBSITE_LENGTH];
+    char storedUsername[MAX_USERNAME_LENGTH];
+    char storedPassword[MAX_PASSWORD_LENGTH];
+
+    printf("Enter website: ");
+    scanf("%s", website);
+
+    printf("Enter username: ");
+    scanf("%s", storedUsername);
+
+    printf("Enter password: ");
+    scanf("%s", storedPassword);
+
+    User newUser;
+    storeCredentials(&newUser, website, storedUsername, storedPassword);
+    //strncpy(newUser.username, username, MAX_USERNAME_LENGTH - 1);
+    //saveUserToFile(&newUser);
+
+    FILE* file = fopen("users.txt", "a");
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return;
+    }
+    fprintf(file, "%s,%s,%s\n", newUser.website, newUser.username, newUser.password);    
+    fclose(file);
+
+    printf("Credential added successfully.\n");
+}*/
+void addCredential(const char* username) {          //not working
+    char website[MAX_WEBSITE_LENGTH];
+    char storedUsername[MAX_USERNAME_LENGTH];
+    char storedPassword[MAX_PASSWORD_LENGTH];
+
+    printf("Enter website: ");
+    scanf("%s", website);
+
+    strcpy(storedUsername,username);
+
+    printf("Enter password: ");
+    scanf("%s", storedPassword);
+
+    User newUser;
+    storeCredentials(&newUser, website, storedUsername, storedPassword);
+    saveUserToFile(&newUser);
+
+    printf("Credential added successfully.\n");
+}
+
+
+/*void showCredentials(const char* username) {        //not
+    FILE* file = fopen("users.txt", "r");
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return;
+    }
+
+    printf("Credentials for user: %s\n", username);
+    char line[100];
+    int found = 0;
+    while (fgets(line, sizeof(line), file) != NULL) {
+        char storedUsername[MAX_USERNAME_LENGTH];
+        char storedPassword[MAX_PASSWORD_LENGTH];
+        char website[MAX_WEBSITE_LENGTH];
+        sscanf(line, "%*[^,],%[^,],%s", storedUsername, storedPassword);
+
+        if (strcmp(username, storedUsername) == 0) {
+            sscanf(line, "%[^,],%[^,],%s", website, storedUsername, storedPassword);
+            printf("Website: %s\n", website);
+            printf("Username: %s\n", storedUsername);
+            printf("Password: %s\n\n", storedPassword);
+            found = 1;
+        }
+    }
+    if (found != 1) {
+        printf("No credentials found for the user: %s\n", username);
+    }
+    fclose(file);
+}*/
+
+void showCredentials(const char* username) {        //not
+    FILE* file = fopen("users.txt", "r");
+    if (file == NULL) {
+        printf("Error opening file.\n");
+        return;
+    }
+
+    printf("Credentials for user: %s\n", username);
+    char line[100];
+    int found = 0;
+    while (fgets(line, sizeof(line), file) != NULL) {
+        char storedUsername[MAX_USERNAME_LENGTH];
+        char storedPassword[MAX_PASSWORD_LENGTH];
+        char storedWebsite[MAX_WEBSITE_LENGTH];
+        sscanf(line, "%[^,],%[^,],%s", storedWebsite, storedUsername, storedPassword);
+
+        if (strcmp(storedUsername, username) == 0) {
+            printf("Website: %s\n", storedWebsite);
+            //printf("Username: %s\n", storedUsername);
+            printf("Password: %s\n\n", storedPassword);
+            found = 1;
+        }
+    }
+    if (found != 1) {
+        printf("No credentials found for the user: %s\n", username);
+    }
+    fclose(file);
+}
+
+
+int main() {
+    int choice;
+    char username[MAX_USERNAME_LENGTH];
+    char password[MAX_PASSWORD_LENGTH];
+    char word[MAX_PASSWORD_GEN_LENGTH];
+    char password_gen[MAX_PASSWORD_GEN_LENGTH];
+
+    printf("Welcome to the Password Management System!\n");
+
+    while (1) {
+        printf("\nMenu:\n");
+        printf("1. Register\n");
+        printf("2. Log in\n");
+        printf("3. Generate Password\n");
+        printf("4. Exit\n");
+        printf("\nEnter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                registerUser();
+                break;
+
+            case 2:
+                printf("Enter your username: ");
+                scanf("%s", username);
+
+                printf("Enter your password: ");
+                scanf("%s", password);
+
+                if (authenticateUser(username, password)) {
+                    printf("Authentication successful. Welcome, %s!\n", username);
+                    int loggedIn = 1;
+                    while (loggedIn) {
+                        printf("\nMenu:\n");
+                        printf("1. Add Credential\n");
+                        printf("2. Show Credentials\n");
+                        printf("3. Log out\n");
+                        printf("Enter your choice: ");
+                        scanf("%d", &choice);
+
+                        switch (choice) {
+                            case 1:
+                                addCredential(username);
+                                break;
+
+                            case 2:
+                                showCredentials(username);
+                                break;
+
+                            case 3:
+                                printf("Logged out.\n");
+                                loggedIn = 0;
+                                break;
+
+                            default:
+                                printf("Invalid choice. Please try again.\n");
+                                break;
+                        }
+                    }
+                } else {
+                    printf("Authentication failed. Invalid username or password.\n");
+                }
+                break;
+
+            case 3:
+                printf("Enter a word: ");
+                scanf("%s", word);
+
+                generatepassword_gen(word, password_gen);
+                printf("Generated password: %s\n", password_gen); 
+                break;
+
+            case 4:
+                printf("Exiting the program. Goodbye!\n");
+                return 0;
+
+            default:
+                printf("Invalid choice. Please try again.\n");
+                break;
+        }
+    }
+}
